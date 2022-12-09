@@ -5,41 +5,32 @@
 #include <mcp_can.h> //https://github.com/coryjfowler/MCP_CAN_lib
 #include <SPI.h>
 
+#define C620_ENCORDER_RESOLUTION 8192
+#define DEGREE 360.0f
+
 unsigned long rxId;
 byte len;
-byte rxBuf[8];
+uint8_t rxBuf[8];
 uint8_t txBuf0[8];
-uint8_t txBuf1[8];
 long Pre_millis;
 
 MCP_CAN CAN0(10);// CAN0 CS: pin 10
-MCP_CAN CAN1(9); // CAN1 CS: pin 9
 
-int16_t target_current = 1000;
-
-int16_t fdb_angle = 0;
-int16_t fdb_rpm = 100;
-int16_t fdb_current = 2000;
-int16_t fdb_temp = 20;
+int16_t target_current = 500;
 
 void setup()
 {
   Serial.begin(115200);
 
   // init CAN0 bus, baudrate: 250kbps@8MHz
-  if(CAN0.begin(MCP_ANY, CAN_250KBPS, MCP_8MHZ) == CAN_OK){
+  if(CAN0.begin(MCP_ANY, CAN_1000KBPS, MCP_8MHZ) == CAN_OK){
     Serial.println("CAN0: Init OK!");
     CAN0.setMode(MCP_NORMAL);
   } else{ 
     Serial.println("CAN0: Init Fail!");
-  }
+    while(1){
 
-  // init CAN1 bus, baudrate: 250kbps@8MHz
-  if(CAN1.begin(MCP_ANY, CAN_250KBPS, MCP_8MHZ) == CAN_OK){
-    Serial.println("CAN1: Init OK!");
-    CAN1.setMode(MCP_NORMAL);
-  }else{ 
-    Serial.println("CAN1: Init Fail!");
+    }
   }
 
 
@@ -53,16 +44,6 @@ void setup()
   txBuf0[6] = 0;
   txBuf0[7] = 0;
 
-  //fdbデータの配列を作成
-  txBuf1[0] = (uint8_t)((fdb_angle & 0xff00) >> 8);
-  txBuf1[1] = (uint8_t) (fdb_angle & 0x00ff);
-  txBuf1[4] = (uint8_t)((fdb_rpm & 0xff00) >> 8);
-  txBuf1[5] = (uint8_t) (fdb_rpm & 0x00ff);
-  txBuf1[4] = (uint8_t)((fdb_current & 0xff00) >> 8);
-  txBuf1[5] = (uint8_t) (fdb_current & 0x00ff);
-  txBuf1[6] = (uint8_t) (fdb_temp & 0x00ff);
-  txBuf1[7] = 0;
-
   Pre_millis = millis();
 }
 
@@ -70,8 +51,7 @@ void loop(){
   static int count=0; 
   if(millis()-Pre_millis > 100){ // Period: 100ms
     CAN0.sendMsgBuf(0x200, 0, 8, txBuf0);
-    CAN1.sendMsgBuf(0x201, 0, 8, txBuf1);
-    Serial.println("Send ID: 0x200,0x201");
+    Serial.println("Send ID: 0x200");
     Pre_millis=millis();
   }
 
@@ -79,22 +59,17 @@ void loop(){
     CAN0.readMsgBuf(&rxId, &len, rxBuf);
     Serial.print("Recive ID: ");
     Serial.print(rxId, HEX);
-    Serial.print(" Data: ");
-    for(byte i = 0; i<len; i++){
-      Serial.print(rxBuf[i], HEX);
-      Serial.print(" ");
-    }
-  }
 
-  if(CAN1.checkReceive()==CAN_MSGAVAIL){
-    CAN1.readMsgBuf(&rxId, &len, rxBuf);
-    Serial.print("Recive ID: ");
-    Serial.print(rxId, HEX);
-    Serial.print(" Data: ");
-    for(byte i = 0; i<len; i++){
-      Serial.print(rxBuf[i], HEX);
-      Serial.print(" ");
-    }
-    Serial.println();
+    int16_t fdb_angle_enc = (rxBuf[0] << 8) + rxBuf[1];
+    int16_t fdb_angle_deg = DEGREE * fdb_angle_enc / C620_ENCORDER_RESOLUTION;
+    int16_t fdb_rpm = (rxBuf[2] << 8) + rxBuf[3];
+    int16_t fdb_current = (rxBuf[4] << 8) + rxBuf[5];
+    int16_t fdb_temp = rxBuf[6];
+
+    Serial.print("\t\tangle: "); Serial.print(fdb_angle_deg); Serial.print("[°]");
+    Serial.print("\trpm: "); Serial.print(fdb_rpm); Serial.print("[rpm]");
+    Serial.print("\tcurrent: "); Serial.print(fdb_current); Serial.print("");
+    Serial.print("\ttemp: "); Serial.print(fdb_temp); Serial.println("[℃]");
   }
+  delay(100);
 }
