@@ -1,6 +1,12 @@
 #include <Arduino.h>
 
-// MCP2515 CAN Send and Recieve Test
+/*
+  CANモジュールのINT→ 使用しない
+  CANモジュールのSCK→ デジタルピン13 (SCLK)
+  CANモジュールのSI → デジタルピン11 (MOSI)
+  CANモジュールのSO → デジタルピン12 (MISO)
+  CANモジュールのCS → デジタルピンD10 (SS) もしくはお好きなデジタルピン
+*/
 
 #include <mcp_can.h> //https://github.com/coryjfowler/MCP_CAN_lib
 #include <SPI.h>
@@ -49,7 +55,7 @@ void setup()
 
 void loop(){
   static int count=0; 
-  if(millis()-Pre_millis > 100){ // Period: 100ms
+  if(millis() - Pre_millis > 100){ // Period: 100ms
     CAN0.sendMsgBuf(0x200, 0, 8, txBuf0);
     Serial.println("Send ID: 0x200");
     Pre_millis=millis();
