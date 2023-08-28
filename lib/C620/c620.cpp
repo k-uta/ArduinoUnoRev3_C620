@@ -41,8 +41,8 @@ void C620_Init(){
 void C620_Update(){
   tim_cnt++;
 
-  if     (tim_cnt <  50 ){ target_current = 300; } 
-  else if(tim_cnt < 100 ){ target_current = 600; } 
+  if     (tim_cnt <  50 ){ target_current = 1000; } 
+  else if(tim_cnt < 100 ){ target_current = 2000; } 
   else                   { tim_cnt = 0 ; }
 }
 
